@@ -2,15 +2,31 @@
 :toclevels: 5
 :figure-caption!:
 
+:barewords_link: link:https://alchemists.io/articles/barewords_pattern[Barewords]
+:containable_link: link:https://alchemists.io/projects/containable[Containable]
+:infusible_link: link:https://alchemists.io/projects/infusible[Infusible]
+:marameters_link: link:https://alchemists.io/projects/marameters[Marameters]
+:method_parameters_and_arguments_link: link:https://alchemists.io/articles/ruby_method_parameters_and_arguments[Method Parameters and Arguments]
+:method_parameters_link: link:https://docs.ruby-lang.org/en/master/Method.html#method-i-parameters[Method#parameters]
+
 = Initable
+
+Initable provides automatic initialization of your objects by leveraging the same parameter structure as provided by {method_parameters_link} while adhering to the {barewords_link} pattern for scoping of attributes. This allows you to quickly define what data/dependencies your object should be constructed with while minimizing the amount of code written. 🎉
 
 toc::[]
 
 == Features
 
+* Provides a Domain Specific Language (DSL) for initializing objects.
+* Uses the same data structure as answered by {method_parameters_link}.
+* Adheres to the {barewords_link} pattern.
+* Reduces the amount of code necessary to implement an object.
+* Built atop the {marameters_link} gem.
+
 == Requirements
 
 . link:https://www.ruby-lang.org[Ruby].
+. A solid understanding of {method_parameters_and_arguments_link}.
 
 == Setup
 
@@ -45,6 +61,591 @@ require "initable"
 ----
 
 == Usage
+
+You only need to require this gem, include the module within your class, and configure the necessary parameters for object initialization. The following provides a simple `Person` object that is  implemented with and without the use of this gem so you can compare, contrast, and notice the reduction in code used:
+
+*With*
+
+[source,ruby]
+----
+require "initable"
+
+class Person
+  include Initable[%i[keyreq first], %i[keyreq last], %i[key middle]]
+
+  def name = [first, middle, last].compact.join " "
+end
+
+person = Person.new first: "Alfred", last: "Pennyworth"
+#<Person:0x000000012d0711c8 @first="Alfred", @last="Pennyworth", @middle=nil>
+
+person.name
+# "Alfred Pennyworth"
+
+person.first
+# private method `first' called for #<Person:0x0000000123899eb8> (NoMethodError)
+----
+
+*Without*
+
+[source,ruby]
+----
+class Person
+  def initialize first:, last:, middle: nil
+    @first = first
+    @last = last
+    @middle = middle
+  end
+
+  def name = [first, middle, last].compact.join " "
+
+  private
+
+  attr_reader :first, :last, :middle
+end
+
+person = Person.new first: "Alfred", last: "Pennyworth"
+#<Person:0x0000000123899eb8 @first="Alfred", @last="Pennyworth", @middle=nil>
+
+person.name
+# "Alfred Pennyworth"
+
+person.first
+# private method `first' called for #<Person:0x0000000123899eb8> (NoMethodError)
+----
+
+Notice, in the examples above, we are able to obtain an instance of `Person` with identical behavior. Even better, using this gem requires less code. We can also see the associated attributes are properly initialized as instance variables. All attributes are _privately_ scoped, by default, so your object doesn't break encapsulation.
+
+The rest of this documentation will focus on how to use this gem with the parameters data structure shared {method_parameters_link}.
+
+ℹ️ Please note, for the rest of this documentation, anonymous classes will be used for code examples which makes local experimentation a smoother experience within your IRB console since you get a new instance of a class each time without having to create new constants or deal with constant collisions.
+
+=== Parameters
+
+There are eight _kinds_ of parameters you can use in method signatures as supported by {method_parameters_link} and detailed in the {method_parameters_and_arguments_link} article. The format is always kind, name, and default. Example:
+
+----
+[<kind>, <name>, <default>]
+----
+
+💡 The default (third element) is always optional which, granted, isn't supported by {method_parameters_link} but is part of this DSL so you can supply a default value for optional positional or keyword parameters with minimal effort.
+
+As detailed in the {method_parameters_and_arguments_link} article, the order of each kind of parameter matters because if you define them out of order, you'll get a syntax error as you would get when not using this gem to initialize an object. For reference, here's the natural order of parameters for a method signature in case it helps:
+
+----
+%i[req opt rest nokey keyreq key keyrest block]
+----
+
+Simply speaking, this means `req` is always in the first position and `block` is always in the last position. You can skip parameters in between, as necessary, but position is always important regardless of what you use.
+
+Each _kind_ of parameter is detailed in the following sections.
+
+==== req
+
+Use `req` when you need a _required positional_ parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[req example]]
+end
+
+demo.new    # wrong number of arguments (given 0, expected 1) (ArgumentError)
+demo.new 1  #<#<Class:0x0000000121562940>:0x0000000122244500 @example=1>
+----
+
+==== opt
+
+Use `opt` when you need an _optional positional_ parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[opt example]]
+end
+
+demo.new    #<#<Class:0x00000001215c1a58>:0x0000000124c3d000 @example=nil>
+demo.new 1  #<#<Class:0x0000000120d4f5a0>:0x00000001248b3ee8 @example=1>
+----
+
+You can also provide a default value by supplying a third element for the parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:opt, :example, 1]]
+end
+
+demo.new     #<#<Class:0x00000001232d6198>:0x0000000131c31c98 @example=1>
+demo.new 10  #<#<Class:0x00000001232d6198>:0x0000000131d1fb00 @example=10>
+----
+
+==== rest
+
+Use `rest` when you need any number of _optional positional_ parameters:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[rest example]]
+end
+
+demo.new          #<#<Class:0x00000001215ef8e0>:0x0000000125272f88 @example=[]>
+demo.new 1, 2, 3  #<#<Class:0x00000001215ef8e0>:0x0000000124f9c228 @example=[1, 2, 3]>
+----
+
+For anonymous single splats (i.e. `+*+`), don't provide a name. Use only the kind:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:rest]]
+end
+----
+
+This is useful when needing to forward all positional arguments to the super class.
+
+==== nokey
+
+Use `nokey` when you want to prevent use of any _keyword_ parameter (i.e. `+**nil+`):
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:nokey]]
+end
+
+demo.new       #<#<Class:0x0000000123d1f820>:0x00000001300baf78>
+demo.new a: 1  # wrong number of arguments (given 1, expected 0) (ArgumentError)
+----
+
+==== keyreq
+
+Use `keyreq` when you need a _required keyword_ parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[keyreq example]]
+end
+
+demo.new             # missing keyword: :example (ArgumentError)
+demo.new example: 1  #<#<Class:0x0000000123c99d88>:0x0000000130655ed8 @example=1>
+----
+
+==== key
+
+Use `key` when you need an _optional keyword_ parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[key example]]
+end
+
+demo.new             #<#<Class:0x0000000123c30e78>:0x00000001307b0008 @example=nil>
+demo.new example: 1  #<#<Class:0x0000000123c99d88>:0x0000000130655ed8 @example=1>
+----
+
+You can also provide a default value by supplying a third element for the parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:key, :example, 1]]
+end
+
+demo.new              #<#<Class:0x0000000123215b50>:0x000000013007ee88 @example=1>
+demo.new example: 10  #<#<Class:0x0000000123215b50>:0x00000001300ff998 @example=10>
+----
+
+==== keyrest
+
+Use `keyrest` when you need any number of _keyword_ parameters:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[keyrest example]]
+end
+
+demo.new
+#<#<Class:0x0000000123d117c0>:0x000000013051e3f8 @example={}>
+
+demo.new a: 1, b: 2
+#<#<Class:0x0000000123d117c0>:0x000000013069e2c8 @example={:a=>1, :b=>2}>
+----
+
+For anonymous double splats (i.e. `+**+`), don't provide a name. Use only the kind:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:keyrest]]
+end
+----
+
+This is useful when needing to forward all keyword arguments to the super class.
+
+==== block
+
+Use `block` when you need a _block_ parameter:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[block example]]
+end
+
+demo.new
+#<#<Class:0x0000000123b59b08>:0x000000013193bac0 @example=nil>
+
+instance = demo.new { "Hi" }
+#<#<Class:0x0000000123b59b08>:0x0000000131a9a380 @example=#<Proc:0x0000000131a9a358 (irb):45>>
+----
+
+For anonymous blocks (i.e. `+&+`), don't provide a name. Use only the kind:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:block]]
+end
+----
+
+This is useful when needing to forward a block to the super class.
+
+=== Defaults
+
+You've already seen that you can provide a third element for defaults with optional positional and keyword parameters. Sometimes, though, you might want to use a more complex object as a default (especially if you want the default to be lazy loaded/initialized). For those situations use a `Proc`. Example:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[
+    [:opt, :one, proc { %w[O n e].join }],
+    [:key, :two, proc { Object.new }]
+  ]
+end
+
+demo.new
+#<#<Class:0x00000001532d4390>:0x0000000153a9b0b0 @one="One", @two=#<Object:0x0000000153a9ade0>>
+----
+
+Notice, for the `one` optional positional parameter, we get a default value of `"One"` once evaluated. For the `two` optional keyword parameter, we get a new instance of `Object` as a default value.
+
+⚠️ At the moment, there a few caveats to be aware of when using procs as defaults:
+
+* Use procs because lambdas will throw a `TypeError`.
+* Use procs _with no arguments_ because only the body of the `Proc` is meant to be parsed. Otherwise, you'll get an `ArgumentError`.
+* Ensure each parameter is defined on a distinct line because the body of the `Proc` is extracted at runtime from the source location of the `Proc`. The goal is to improve upon this more in the future.
+* Avoid using within an IRB session because each value will evaluate as `nil`.
+
+=== Barewords
+
+As mentioned earlier, all instances adhere to the {barewords_link} pattern so you have direct access to all data/dependencies via bare word methods. Here's an example with an instance using a required positional and optional keyword parameter.
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[req one], [:key, :two, 2]]
+
+  def debug = puts "One: #{one}, Two: #{two}."
+end
+
+demo.new(1).debug  # One: 1, Two: 2.
+----
+
+Notice, with the `debug` method, only bare words are used as provided by the attribute readers.
+
+=== Scopes
+
+As mentioned earlier, all attributes are scoped -- via `attr_reader` -- as `private` by default but `protected` and `public` scopes are supported too. Here are examples of each:
+
+==== Private
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[req example]]
+end
+
+demo.new(1).example
+# private method `example' called for an instance of #<Class:0x000000012c1f78b8> (NoMethodError)
+----
+
+==== Protected
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable.protected(%i[req example])
+end
+
+demo.new(1).example
+# protected method `example' called for an instance of #<Class:0x000000012b316ec0> (NoMethodError)
+----
+
+==== Public
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable.public(%i[req example])
+end
+
+demo.new(1).example
+# 1
+----
+
+==== Combinations
+
+You can combine scopes, if desired, as well. Here's an example using three required positional parameters with different scopes:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[req one]]
+  include Initable.protected(%i[req two])
+  include Initable.public(%i[req three])
+end
+
+instance = demo.new 1, 2, 3
+#<#<Class:0x000000012c4d3708>:0x00000001501fbc78 @one=1, @two=2, @three=3>
+
+instance.one
+# private method `one' called for an instance of #<Class:0x000000012c4d3708> (NoMethodError)
+
+instance.two
+# protected method `two' called for an instance of #<Class:0x000000012c4d3708> (NoMethodError)
+
+instance.three
+# 3
+----
+
+⚠️ While convenient to initialize an object with different scopes, this does introduce additional multiple inheritance in your object ancestry. While not necessarily bad, if your object isn't overly complicated or requires more than three parameters (🎗️ Don't forget to adhere to the _rule of three_), you might need to break your class into smaller dependencies and/or switch to manually defining the `initialize` method.
+
+=== Inheritance
+
+Inheritance works similar to parent/child relationships as found in standard Ruby classes with a few enhancements thrown in for convenience. Several examples are provided below. For each, there is an identical implementation using Plain Old Ruby Objects (POROs) so you can contrast/compare for clarity.
+
+[source,ruby]
+----
+parent = Class.new do
+  include Initable.protected(%i[req one])
+end
+
+child = Class.new parent do
+  include Initable[[:opt, :two, 2]]
+end
+
+parent.new 1
+#<#<Class:0x00000001252988f0>:0x00000001265f0c90 @one=1>
+
+child.new 1
+#<#<Class:0x0000000123a5a158>:0x00000001254beb20 @one=1, @two=2>
+
+child.new 10, 20
+#<#<Class:0x000000012261a828>:0x0000000126973d40 @one=10, @two=20>
+----
+
+.Plain Implementation
+[%collapsible]
+====
+[source,ruby]
+----
+parent = Class.new do
+  def initialize one
+    @one = one
+  end
+
+  protected
+
+  attr_reader :one
+end
+
+child = Class.new parent do
+  def initialize one, two = 2
+    super one
+    @two = two
+  end
+
+  private
+
+  attr_reader :two
+end
+
+parent.new 1
+#<#<Class:0x0000000127b3f790>:0x0000000134abe368 @one=1>
+
+child.new 1
+#<#<Class:0x0000000127b3f5b0>:0x0000000134b16748 @one=1, @two=2>
+
+child.new 10, 20
+#<#<Class:0x0000000127b3f5b0>:0x0000000134b91880 @one=10, @two=20>
+----
+====
+
+Notice the `child` instance has access to both the `one` and `two` attributes where `one` is defined as _protected_ by the `parent` and `two` is defined as _private_ for the `child`. This is no different in how you'd subclass without using this gem. You only need to define the attributes you need in the `child` class since there is no need to redefine what the `parent` already has defined. This gem will handle proper setup of your instance variables as well as forwarding, via `super`, any/all attributes to the `parent` as necessary. The automatic forwarding, via `super`, applies for all parameters.
+
+==== Positionals
+
+[source,ruby]
+----
+parent = Class.new do
+  include Initable.protected(%i[req one], [:opt, :two, 2])
+end
+
+child = Class.new parent do
+  include Initable[%i[req three], [:opt, :two, 2]]
+end
+
+child.new 1, 3
+#<#<Class:0x0000000126012ee0>:0x0000000128591478 @one=1, @two=2, @three=3>
+
+child.new 1, 3, 20
+#<#<Class:0x0000000126012ee0>:0x00000001286353e8 @one=1, @two=20, @three=3>
+----
+
+.Plain Implementation
+[%collapsible]
+====
+[source,ruby]
+----
+parent = Class.new do
+  def initialize one, two = 2
+    @one = one
+    @two = two
+  end
+
+  private
+
+  attr_reader :one, :two
+end
+
+child = Class.new parent do
+  def initialize one, three, two = 2
+    super one, two
+    @three = three
+  end
+
+  private
+
+  attr_reader :three
+end
+
+child.new 1, 3
+#<#<Class:0x0000000126076e18>:0x0000000128297240 @one=1, @two=2, @three=3>
+
+child.new 1, 3, 20
+#<#<Class:0x0000000126076e18>:0x00000001284344b8 @one=1, @two=20, @three=3>
+----
+====
+
+Positional parameters are less flexible than keyword parameters especially when optional parameters are involved because the order of parameters matters and the `two` parameter with a default of `2` has to be repeated in the child so `two` can be forwarded by `super` when not supplied.
+
+==== Keywords
+
+[source,ruby]
+----
+parent = Class.new do
+  include Initable.protected(%i[keyreq one], [:key, :two, 2])
+end
+
+child = Class.new parent do
+  include Initable[%i[keyreq three], [:key, :four, 4]]
+end
+
+child.new one: 1, three: 3
+#<#<Class:0x000000012e052ee8>:0x0000000138311800 @one=1, @two=2, @three=3, @four=4>
+
+child.new one: 1, two: 20, three: 3, four: 40
+#<#<Class:0x000000012e052ee8>:0x00000001383d0b10 @one=1, @two=20, @three=3, @four=40>
+----
+
+.Plain Implementation
+[%collapsible]
+====
+[source,ruby]
+----
+parent = Class.new do
+  def initialize one:, two: 2
+    @one = one
+    @two = two
+  end
+
+  private
+
+  attr_reader :one, :two
+end
+
+child = Class.new parent do
+  def initialize(three:, four: 4, **)
+    super(**)
+    @three = three
+    @four = four
+  end
+
+  private
+
+  attr_reader :three, :four
+end
+
+child.new one: 1, three: 3
+#<#<Class:0x000000012e052ee8>:0x0000000138311800 @one=1, @two=2, @three=3, @four=4>
+
+child.new one: 1, two: 20, three: 3, four: 40
+#<#<Class:0x000000012a558680>:0x0000000139831c80 @one=1, @two=20, @three=3, @four=40>
+----
+====
+
+Due to the power of keyword parameters, we don't have to redefine defaults in the `child` and can simply forward any/all missing arguments to the `parent`. This happens automatically but you can see how this done in the plain implementation.
+
+==== Blocks
+
+[source,ruby]
+----
+parent = Class.new do
+  include Initable.protected(%i[block function])
+end
+
+child = Class.new parent
+
+
+child.new { "demo" }
+#<#<Class:0x0000000129c92320>:0x0000000139c95538 @function=#<Proc:0x0000000139c95470 (irb):50>>
+----
+
+.Plain Implementation
+[%collapsible]
+====
+[source,ruby]
+----
+parent = Class.new do
+  def initialize &function
+    @function = function
+  end
+
+  private
+
+  attr_reader :function
+end
+
+child = Class.new parent
+
+child.new { "demo" }
+#<#<Class:0x000000012a5f0160>:0x0000000138375580 @function=#<Proc:0x0000000138375508 (irb):65>>
+----
+====
+
+With blocks, you only have to name them in the `parent` and they will be forwarded by the child. Keep in mind that if you only need to pass the block to the parent but want to use a `block_given?` check before messaging the function in your parent class, then you don't need to use this gem for those situations.
+
+=== Guidelines
+
+The following is worth adhering to:
+
+* Use the _rule of three_ where you only don't use more than three parameters for your method signature. Anything more than that and you have an unborn object that needs a name for dependency injection instead. 💡 For advanced dependency management, consider using {containable_link} and/or {infusible_link}.
+* Avoid using complex logic in proc-wrapped defaults. Procs should only be used for lazy loading of default objects.
 
 == Development
 
