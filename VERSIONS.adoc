@@ -1,5 +1,10 @@
 = Versions
 
-== 0.0.0 (2024-10-11)
+== 0.0.0 (2025-01-01)
 
-* Added initial implementation.
+* 🟢 Added Marameters gem - Brooke Kuhlmann
+* 🟢 Added builder - Brooke Kuhlmann
+* 🟢 Added documentation - Brooke Kuhlmann
+* 🟢 Added method scopes constant - Brooke Kuhlmann
+* 🟢 Added primary object API - Brooke Kuhlmann
+* 🟢 Added project skeleton - Brooke Kuhlmann

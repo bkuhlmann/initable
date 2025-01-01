@@ -4,7 +4,7 @@ title: Initable
 abstract: An automatic object initializer.
 version: 0.0.0
 license: Hippocratic-2.1
-date-released: 2024-10-11
+date-released: 2025-01-01
 authors:
   - family-names: Kuhlmann
     given-names: Brooke
@@ -12,6 +12,10 @@ authors:
     orcid: https://orcid.org/0000-0002-5810-6268
 keywords:
  - ruby
+ - initializer
+ - initialization
+ - construction
+ - automatic
 repository-code: https://github.com/bkuhlmann/initable
 repository-artifact: https://rubygems.org/gems/initable
 url: https://alchemists.io/projects/initable
