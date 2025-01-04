@@ -18,10 +18,11 @@ toc::[]
 == Features
 
 * Provides a Domain Specific Language (DSL) for initializing objects.
+* Built atop the {marameters_link}.
 * Uses the same data structure as answered by {method_parameters_link}.
 * Adheres to the {barewords_link} pattern.
 * Reduces the amount of code necessary to implement an object.
-* Built atop the {marameters_link} gem.
+* Pairs well with {infusible_link}.
 
 == Requirements
 
@@ -317,7 +318,7 @@ This is useful when needing to forward a block to the super class.
 
 === Defaults
 
-You've already seen that you can provide a third element for defaults with optional positional and keyword parameters. Sometimes, though, you might want to use a more complex object as a default (especially if you want the default to be lazy loaded/initialized). For those situations use a `Proc`. Example:
+You've already seen you can provide a third element for defaults with optional positional and keyword parameters. Sometimes, though, you might want to use a more complex object as a default (especially if you want the default to be lazy loaded/initialized). For those situations use a `Proc`. Example:
 
 [source,ruby]
 ----
@@ -334,12 +335,12 @@ demo.new
 
 Notice, for the `one` optional positional parameter, we get a default value of `"One"` once evaluated. For the `two` optional keyword parameter, we get a new instance of `Object` as a default value.
 
-⚠️ At the moment, there a few caveats to be aware of when using procs as defaults:
+⚠️ There a few caveats to be aware of when using proc-based defaults:
 
 * Use procs because lambdas will throw a `TypeError`.
 * Use procs _with no arguments_ because only the body of the `Proc` is meant to be parsed. Otherwise, you'll get an `ArgumentError`.
-* Ensure each parameter is defined on a distinct line because the body of the `Proc` is extracted at runtime from the source location of the `Proc`. The goal is to improve upon this more in the future.
-* Avoid using within an IRB session because each value will evaluate as `nil`.
+* Ensure each parameter -- with a default -- is defined on a distinct line because the body of the `Proc` is extracted at runtime from the source location of the `Proc`. The goal is to improve upon this further once Ruby supports source location with line start, line end, column start, and column end information.
+* Avoid using C-based primitives since source code can't be obtained and you'll get a `StandardError`.
 
 === Barewords
 
@@ -639,6 +640,20 @@ child.new { "demo" }
 ====
 
 With blocks, you only have to name them in the `parent` and they will be forwarded by the child. Keep in mind that if you only need to pass the block to the parent but want to use a `block_given?` check before messaging the function in your parent class, then you don't need to use this gem for those situations.
+
+=== Infusible
+
+This gem pairs well with the {infusible_link} gem and requires no additional effort on your part. In terms of style, stick with including Initiable before Infusible because you'll most likely be using Initable to define basic parameters while Infusible will be used to inject dependencies from your container. This way your parameters will read sequentially left-to-right or top-to-bottom when looking at the implementation which improves readability. Example:
+
+[source,ruby]
+----
+class Demo
+  include Initable[%i[req label]]
+  include Infusible[:logger]
+end
+----
+
+You can include Initiable and Infusible in any order, though. Lastly, as with all keyword parameters, make sure you don't define the same key for both or you'll have an order of operations issue where one key overrides the other.
 
 === Guidelines
 

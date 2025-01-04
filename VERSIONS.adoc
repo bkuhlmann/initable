@@ -1,5 +1,11 @@
 = Versions
 
+== 0.1.0 (2025-01-10)
+
+* 🟢 Added version release notes - Brooke Kuhlmann
+* 🔼 Updated to Amazing Print 1.7.0 - Brooke Kuhlmann
+* 🔼 Updated to Marameters 4.1.0 - Brooke Kuhlmann
+
 == 0.0.0 (2025-01-01)
 
 * 🟢 Added Marameters gem - Brooke Kuhlmann
