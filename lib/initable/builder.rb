@@ -50,13 +50,9 @@ module Initable
     end
 
     def define_readers ancestor
-      (names - ancestor.names).each do |name|
-        symbol = name.inspect
-
-        instance_module.module_eval <<-READERS, __FILE__, __LINE__ + 1
-          #{compute_scope} attr_reader #{symbol}
-        READERS
-      end
+      instance_module.module_eval <<-READERS, __FILE__, __LINE__ + 1
+        #{compute_scope} attr_reader(*#{names - ancestor.names})
+      READERS
     end
 
     def compute_scope = METHOD_SCOPES.include?(scope) ? scope : :private
