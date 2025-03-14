@@ -129,7 +129,7 @@ There are eight _kinds_ of parameters you can use in method signatures as suppor
 [<kind>, <name>, <default>]
 ----
 
-💡 The default (third element) is always optional which, granted, isn't supported by {method_parameters_link} but is part of this DSL so you can supply a default value for optional positional or keyword parameters with minimal effort.
+💡 The default (third element) is always optional and isn't supported by {method_parameters_link} but is part of this DSL so you can supply a default value for optional positional or keyword parameters with minimal effort.
 
 As detailed in the {method_parameters_and_arguments_link} article, the order of each kind of parameter matters because if you define them out of order, you'll get a syntax error as you would get when not using this gem to initialize an object. For reference, here's the natural order of parameters for a method signature in case it helps:
 
@@ -316,6 +316,45 @@ end
 
 This is useful when needing to forward a block to the super class.
 
+=== Keywords
+
+As an added convenience, you can use keywords in addition to positional arguments when initializing your class. Example:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[one: 1, two: 2]
+end
+
+demo.new  #<#<Class:0x0000000135753678>:0x0000000136091f00 @one=1, @two=2>
+----
+
+The above is identical to the following but with less typing:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[[:key, :one, 1], [:key, :two, 2]]
+end
+
+demo.new  #<#<Class:0x0000000136f1ef78>:0x00000001518775b0 @one=1, @two=2>
+----
+
+You can also combine positionals with keywords:
+
+[source,ruby]
+----
+demo = Class.new do
+  include Initable[%i[req one], [:key, :two, 2], three: 3]
+end
+
+demo.new 1  # #<#<Class:0x0000000136ede9c8>:0x0000000151ebab98 @one=1, @two=2, @three=3>
+----
+
+⚠️ As with default `+#initialize+` implementations, ensure you don't duplicate parameter names to avoid naming collisions.
+
+In most cases, you'll want to use xref:_parameters[Parameters] as documented earlier. Otherwise, this is a nice way to initialize with safe defaults or utilize lightweight dependency injection without having to reach for {infusible_link} when you don't need a full fledged {containable_link} container.
+
 === Defaults
 
 You've already seen you can provide a third element for defaults with optional positional and keyword parameters. Sometimes, though, you might want to use a more complex object as a default (especially if you want the default to be lazy loaded/initialized). For those situations use a `Proc`. Example:
@@ -325,12 +364,17 @@ You've already seen you can provide a third element for defaults with optional p
 demo = Class.new do
   include Initable[
     [:opt, :one, proc { %w[O n e].join }],
-    [:key, :two, proc { Object.new }]
+    [:key, :two, proc { Object.new }],
+    three: proc { StringIO.new }
   ]
 end
 
 demo.new
-#<#<Class:0x00000001532d4390>:0x0000000153a9b0b0 @one="One", @two=#<Object:0x0000000153a9ade0>>
+# <#<Class:0x00000001532d4390>:0x0000000153a9b0b0
+#    @one="One",
+#    @two=#<Object:0x000000012f89b108>,
+#    @three=#<StringIO:0x000000012fe361f8>
+# >
 ----
 
 Notice, for the `one` optional positional parameter, we get a default value of `"One"` once evaluated. For the `two` optional keyword parameter, we get a new instance of `Object` as a default value.
@@ -340,6 +384,7 @@ Notice, for the `one` optional positional parameter, we get a default value of `
 * Use procs because lambdas will throw a `TypeError`.
 * Use procs _with no arguments_ because only the body of the `Proc` is parsed. Otherwise, you'll get an `ArgumentError`.
 * Ensure each parameter -- with a default -- is defined on a distinct line because the body of the `Proc` is extracted at runtime from the source location of the `Proc`. The goal is to improve upon this further once Ruby link:https://bugs.ruby-lang.org/issues/21005[adds] source location with line start, line end, column start, and column end information.
+* This does not work consistently in IRB due to the above mentioned Ruby issue.
 
 === Barewords
 
