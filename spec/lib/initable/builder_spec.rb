@@ -226,7 +226,9 @@ RSpec.describe Initable::Builder do
     end
 
     context "with public attributes" do
-      let(:implementation) { Class.new.include(described_class.new(*parameters, scope: :public)) }
+      let :implementation do
+        Class.new.include(described_class.new(*parameters, method_scope: :public))
+      end
 
       it "defines instance variables" do
         expect(builder.inspect).to include(
@@ -253,7 +255,7 @@ RSpec.describe Initable::Builder do
 
     context "with protected attributes" do
       let :implementation do
-        Class.new.include(described_class.new(*parameters, scope: :protected))
+        Class.new.include(described_class.new(*parameters, method_scope: :protected))
       end
 
       it "defines instance variables" do
@@ -280,7 +282,9 @@ RSpec.describe Initable::Builder do
     end
 
     context "with invalid scope" do
-      let(:implementation) { Class.new.include(described_class.new(*parameters, scope: :bogus)) }
+      let :implementation do
+        Class.new.include(described_class.new(*parameters, method_scope: :bogus))
+      end
 
       it "defines instance variables" do
         expect(builder.inspect).to include(

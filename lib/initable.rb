@@ -8,7 +8,7 @@ module Initable
 
   def self.[](*, **) = Builder.new(*, **)
 
-  def self.protected(*, **) = Builder.new(*, scope: __method__, **)
+  def self.protected(*, **) = Builder.new(*, method_scope: __method__, **)
 
-  def self.public(*, **) = Builder.new(*, scope: __method__, **)
+  def self.public(*, **) = Builder.new(*, method_scope: __method__, **)
 end

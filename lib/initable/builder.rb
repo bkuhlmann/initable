@@ -5,12 +5,12 @@ require "marameters"
 module Initable
   # Builds initialization behavior.
   class Builder < Module
-    def initialize *parameters, scope: :private, **keywords
+    def initialize *parameters, method_scope: :private, **keywords
       super()
       keywords.each { |key, value| parameters.push [:key, key, value] }
 
       @parameters = Marameters.for parameters
-      @scope = scope
+      @method_scope = method_scope
       @names = @parameters.names.compact
       @instance_module = Module.new.set_temporary_name "initable"
 
@@ -25,7 +25,7 @@ module Initable
 
     private
 
-    attr_reader :scope, :parameters, :names, :instance_module
+    attr_reader :method_scope, :parameters, :names, :instance_module
 
     def define_initialize descendant,
                           inheritor: Marameters::Signatures::Inheritor.new,
@@ -54,6 +54,6 @@ module Initable
       READERS
     end
 
-    def compute_scope = METHOD_SCOPES.include?(scope) ? scope : :private
+    def compute_scope = METHOD_SCOPES.include?(method_scope) ? method_scope : :private
   end
 end
