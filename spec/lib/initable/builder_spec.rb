@@ -40,7 +40,7 @@ RSpec.describe Initable::Builder do
 
       it "defines additional variable" do
         implementation.include described_class.new(%i[req two])
-        expect(implementation.new(1, 2).inspect).to include("@one=1, @two=2")
+        expect(implementation.new(1, 2).inspect).to include("@two=2, @one=1")
       end
     end
 
@@ -62,7 +62,7 @@ RSpec.describe Initable::Builder do
 
       it "defines additional variable" do
         implementation.include described_class.new([:opt, :one, 1], [:opt, :two, 2])
-        expect(implementation.new.inspect).to include("@one=1, @two=2")
+        expect(implementation.new.inspect).to include("@two=2, @one=1")
       end
     end
 
@@ -80,7 +80,7 @@ RSpec.describe Initable::Builder do
 
       it "defines instance variables with alternate name" do
         implementation.include described_class.new(%i[rest alt])
-        expect(implementation.new(1, 2, 3).inspect).to include("@test=[1, 2, 3], @alt=[1, 2, 3]")
+        expect(implementation.new(1, 2, 3).inspect).to include("@alt=[1, 2, 3], @test=[1, 2, 3]")
       end
     end
 
@@ -93,7 +93,7 @@ RSpec.describe Initable::Builder do
 
       it "defines additional variable" do
         implementation.include described_class.new(%i[keyreq two])
-        expect(implementation.new(one: 1, two: 2).inspect).to include("@one=1, @two=2")
+        expect(implementation.new(one: 1, two: 2).inspect).to include("@two=2, @one=1")
       end
     end
 
@@ -115,7 +115,7 @@ RSpec.describe Initable::Builder do
 
       it "defines additional variable" do
         implementation.include described_class.new([:key, :two, 2])
-        expect(implementation.new.inspect).to include("@one=1, @two=2")
+        expect(implementation.new.inspect).to include("@two=2, @one=1")
       end
     end
 
@@ -135,7 +135,7 @@ RSpec.describe Initable::Builder do
         implementation.include described_class.new(%i[keyrest alt])
 
         expect(implementation.new(a: 1, b: 2).inspect).to include(
-          "@test={a: 1, b: 2}, @alt={a: 1, b: 2}"
+          "@alt={a: 1, b: 2}, @test={a: 1, b: 2}"
         )
       end
     end
@@ -155,7 +155,7 @@ RSpec.describe Initable::Builder do
         implementation.include described_class.new(%i[block alt])
 
         expect(implementation.new(&function).inspect).to include(
-          "@test=#{function}, @alt=#{function}"
+          "@alt=#{function}, @test=#{function}"
         )
       end
     end
@@ -163,18 +163,27 @@ RSpec.describe Initable::Builder do
     context "with inheritance" do
       subject(:builder) { implementation.new(1, 2, :sub, 3, four: 4, five: 5, a: 1, &function) }
 
-      let :sub_parameters do
-        [
-          %i[opt sub sub]
-        ]
-      end
+      let(:sub_parameters) { [%i[opt sub sub]] }
 
       it "defines instance variables for subclass" do
         implementation.include described_class.new(*sub_parameters)
 
         expect(builder.inspect).to include(
-          "@one=1, @two=2, @three=[3], @four=4, @five=5, @six={a: 1}, " \
-          "@seven=#{function}, @sub=:sub"
+          "@sub=:sub, @one=1, @two=2, @three=[3], @four=4, @five=5, @six={a: 1}, " \
+          "@seven=#{function}"
+        )
+      end
+    end
+
+    context "with frozen ancestor" do
+      subject(:builder) { child.new 1, four: 4 }
+
+      let(:parent) { Class.new { def initialize = freeze } }
+      let(:child) { Class.new(parent).include described_class.new(*parameters) }
+
+      it "defines instance variables without frozen error" do
+        expect(builder.inspect).to include(
+          "@one=1, @two=2, @three=[], @four=4, @five=5, @six={}, @seven=nil"
         )
       end
     end

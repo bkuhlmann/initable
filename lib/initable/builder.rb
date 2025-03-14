@@ -36,8 +36,8 @@ module Initable
 
       instance_module.module_eval <<-METHOD, __FILE__, __LINE__ + 1
         def initialize(#{signature})
-          super(#{forwarder.call ancestor, parameters})
           #{build_instance_variables ancestor}
+          super(#{forwarder.call ancestor, parameters})
         end
       METHOD
 
