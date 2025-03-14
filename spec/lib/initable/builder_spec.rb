@@ -160,6 +160,25 @@ RSpec.describe Initable::Builder do
       end
     end
 
+    context "with positionals and keywords" do
+      let :implementation do
+        Class.new.include described_class.new(*parameters, extra: 1, other: 2)
+      end
+
+      let(:methods) { %i[one two three four five six seven extra other] }
+
+      it "defines instance variables" do
+        expect(builder.inspect).to include(
+          "@one=1, @two=2, @three=[3], @four=4, @five=5, @six={a: 1}, @seven=#{function}, " \
+          "@extra=1, @other=2"
+        )
+      end
+
+      it "defines private methods" do
+        expect(builder.private_methods).to include(*methods)
+      end
+    end
+
     context "with inheritance" do
       subject(:builder) { implementation.new(1, 2, :sub, 3, four: 4, five: 5, a: 1, &function) }
 

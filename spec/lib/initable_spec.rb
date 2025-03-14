@@ -4,7 +4,13 @@ require "spec_helper"
 
 RSpec.describe Initable do
   context "with private scope" do
-    subject(:initable) { Class.new.include(described_class[[:key, :one, 1]]).new }
+    subject :initable do
+      Class.new.include(described_class[[:key, :one, 1], two: 2]).new
+    end
+
+    it "defines private methods" do
+      expect(initable.private_methods).to include(:one, :two)
+    end
 
     it "prevents private access" do
       expectation = proc { initable.one }
@@ -13,7 +19,11 @@ RSpec.describe Initable do
   end
 
   context "with protected scope" do
-    subject(:initable) { Class.new.include(described_class.protected([:key, :one, 1])).new }
+    subject(:initable) { Class.new.include(described_class.protected([:key, :one, 1], two: 2)).new }
+
+    it "defines protected methods" do
+      expect(initable.protected_methods).to include(:one, :two)
+    end
 
     it "prevents private access" do
       expectation = proc { initable.one }
@@ -22,7 +32,11 @@ RSpec.describe Initable do
   end
 
   context "with public scope" do
-    subject(:initable) { Class.new.include(described_class.public([:key, :one, 1])).new }
+    subject(:initable) { Class.new.include(described_class.public([:key, :one, 1], two: 2)).new }
+
+    it "defines protected methods" do
+      expect(initable.public_methods).to include(:one, :two)
+    end
 
     it "allows public access" do
       expect(initable.one).to eq(1)

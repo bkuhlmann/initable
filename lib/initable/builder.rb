@@ -4,14 +4,13 @@ require "marameters"
 
 module Initable
   # Builds initialization behavior.
-  # :reek:TooManyInstanceVariables
   class Builder < Module
-    def initialize *parameters, scope: :private, marameters: Marameters
+    def initialize *parameters, scope: :private, **keywords
       super()
+      keywords.each { |key, value| parameters.push [:key, key, value] }
 
-      @parameters = marameters.for parameters
+      @parameters = Marameters.for parameters
       @scope = scope
-      @marameters = marameters
       @names = @parameters.names.compact
       @instance_module = Module.new.set_temporary_name "initable"
 
@@ -26,13 +25,13 @@ module Initable
 
     private
 
-    attr_reader :scope, :parameters, :marameters, :names, :instance_module
+    attr_reader :scope, :parameters, :names, :instance_module
 
     def define_initialize descendant,
                           inheritor: Marameters::Signatures::Inheritor.new,
                           forwarder: Marameters::Signatures::Super.new
-      ancestor = marameters.of(descendant, :initialize).first
-      signature = inheritor.call(ancestor, parameters).then { |params| marameters.signature params }
+      ancestor = Marameters.of(descendant, :initialize).first
+      signature = inheritor.call(ancestor, parameters).then { |params| Marameters.signature params }
 
       instance_module.module_eval <<-METHOD, __FILE__, __LINE__ + 1
         def initialize(#{signature})
