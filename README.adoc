@@ -329,7 +329,7 @@ end
 demo.new  #<#<Class:0x0000000135753678>:0x0000000136091f00 @one=1, @two=2>
 ----
 
-The above is identical to the following but with less typing:
+The above is identical to the following but with more typing:
 
 [source,ruby]
 ----
@@ -351,9 +351,9 @@ end
 demo.new 1  # #<#<Class:0x0000000136ede9c8>:0x0000000151ebab98 @one=1, @two=2, @three=3>
 ----
 
-⚠️ As with default `+#initialize+` implementations, ensure you don't duplicate parameter names to avoid naming collisions.
+⚠️ As with default `+#initialize+` behavior, ensure you don't duplicate parameter names to avoid naming collisions.
 
-In most cases, you'll want to use xref:_parameters[Parameters] as documented earlier. Otherwise, this is a nice way to initialize with safe defaults or utilize lightweight dependency injection without having to reach for {infusible_link} when you don't need a full fledged {containable_link} container.
+In most cases, you'll want to use xref:_parameters[Parameters] as documented earlier. Otherwise, this is a nice way to initialize with safe defaults or utilize lightweight dependency injection without reaching for {infusible_link} when you don't need a full fledged {containable_link} container.
 
 === Defaults
 
