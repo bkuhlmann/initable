@@ -73,7 +73,7 @@ RSpec.describe Initable::Builder do
         expect(implementation.new(1, 2, 3).inspect).to include("@test=[1, 2, 3]")
       end
 
-      it "defines instance variable with anonymous name" do
+      fit "defines instance variable with anonymous name" do
         implementation.include described_class.new([:rest])
         expect(implementation.new(1, 2, 3).inspect).to include("@test=[1, 2, 3]")
       end

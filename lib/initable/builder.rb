@@ -34,7 +34,7 @@ module Initable
       signature = inheritor.call(ancestor, parameters).then { |params| Marameters.signature params }
 
       instance_module.module_eval <<-METHOD, __FILE__, __LINE__ + 1
-        def initialize(#{signature})
+        define_method :initialize do |#{signature}|
           #{build_instance_variables ancestor}
           super(#{forwarder.call ancestor, parameters})
         end
